@@ -275,7 +275,7 @@ function launchAnalysis(){
   window.open("analysis.html", "_blank");
 }
 
-let recognition;
+//let recognition;
 let currentInput = null;
 
 /*
@@ -307,10 +307,16 @@ function initVoice() {
 }
 */
 
+
 function startVoice(inputId) {
+  if (!recognition) {
+    alert("Reconnaissance vocale indisponible");
+    return;
+  }
   currentInput = document.getElementById(inputId);
   recognition.start();
 }
+
 
 function parseMesure(text) {
   text = text.toLowerCase();
@@ -368,8 +374,10 @@ function handleVoiceCommand(text) {
   // 👉 commande pièce suivante
   if (COMMAND_NEXT_PART.some(cmd => text.includes(cmd))) {
     saveM(currentMeasureIndex);
-    openM(currentMeasureIndex + 1);
-    currentMeasureIndex++;
+    
+currentMeasureIndex++;
+openM(currentMeasureIndex);
+
     currentIndex = 0;
     return;
   }
@@ -378,7 +386,14 @@ function handleVoiceCommand(text) {
   let value = parseMesure(text);
 
   if (!isNaN(value)) {
-    let input = document.getElementById("m" + points[currentIndex].id);
+    
+let validPoints = points.filter(p => p.name);
+let point = validPoints[currentIndex];
+
+if (!point) return;
+
+let input = document.getElementById("m" + point.id);
+
     if (input) {
       input.value = value;
     }
@@ -404,11 +419,6 @@ function goToNextInput() {
 }
 ``
 
-function startDictation() {
-  recognition.start();
-}
-
-
 function speak(msg) {
   const synth = window.speechSynthesis;
   const utter = new SpeechSynthesisUtterance(msg);
@@ -417,7 +427,20 @@ function speak(msg) {
 }
 
 
-initVoice();
+function startDictation() {
+  if (!recognition) {
+    alert("Reconnaissance vocale indisponible");
+    return;
+  }
+  recognition.start();
+}
+
+if ('webkitSpeechRecognition' in window) {
+  initVoice();
+} else {
+  console.log("Reconnaissance vocale non supportée");
+}
+
 
 
 
