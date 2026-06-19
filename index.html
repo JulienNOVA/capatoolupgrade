@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Capa Tool</title>
+
+<style>
+body{font-family:Arial;margin:0;background:#f5f7fa;}
+.header{display:flex;align-items:center;gap:10px;padding:10px;background:white;border-bottom:3px solid #1f5aa6;}
+.header img{height:40px;}
+.header-title{font-weight:bold;color:#1f5aa6;}
+.nav{display:flex;gap:20px;padding:10px;background:#e9eef5;font-weight:bold;cursor:pointer;}
+.nav span{color:#1f5aa6;}
+.container{padding:15px;max-width:1000px;margin:auto;}
+.card{background:white;padding:15px;border-radius:10px;margin-bottom:15px;overflow-x:auto;border:1px solid #ddd;}
+.card.analysis{border:2px solid #1f5aa6;background:#f9fbff;}
+.form-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.form-row label{width:140px;font-weight:bold;}
+.form-row input{flex:1;padding:8px;}
+.info-bar{background:#e9eef5;padding:10px;border-radius:8px;margin-bottom:10px;font-size:13px;display:flex;justify-content:space-between;}
+
+table{width:100%;border-collapse:collapse;table-layout:fixed;}
+th,td{border-bottom:1px solid #ccc;padding:6px;text-align:center;}
+th{background:#1f5aa6;color:white;font-size:12px;}
+
+table input, table select{width:100%;box-sizing:border-box;padding:5px;font-size:12px;}
+
+button{padding:12px;border:none;border-radius:8px;font-size:14px;color:white;font-weight:bold;}
+.start-btn{background:#1f5aa6;width:100%;margin-top:10px;}
+.ok-btn{background:#2ecc71;margin-top:10px;width:100%;}
+
+.value-ok{background:#2ecc71;color:white;}
+.value-nok{background:#e74c3c;color:white;}
+.delete-btn{cursor:pointer;color:red;}
+.link{cursor:pointer;color:#1f5aa6;text-decoration:underline;}
+
+#modal{display:none;position:fixed;top:20%;left:50%;transform:translateX(-50%);background:white;border-radius:10px;padding:15px;width:90%;max-width:450px;box-shadow:0 5px 20px rgba(0,0,0,0.2);} 
+.point-line{margin-bottom:10px;}
+.point-title{font-weight:bold;color:#1f5aa6;}
+.point-spec{font-size:12px;color:#555;margin-bottom:3px;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <img src="https://www.cfnews.net/var/cfnews/storage/images/_aliases/medium/mediatheque/hd/standard-hd/logos/novares-art-logo-2019/1372329-3-fre-FR/Novares-ART-Logo-2019.png">
+  <div class="header-title">CAPA TOOL</div>
+</div>
+
+<div class="nav">
+  <span onclick="showPage('formPage')">FORMULAIRE</span>
+  <span onclick="showPage('analysisPage')">CAPA</span>
+  <span onclick="showPage('report')">ANALYSE</span>
+</div>
+
+<div class="container">
+
+<div id="formPage" class="card">
+<div class="form-row"><label>Customer :</label><input id="customer"></div>
+<div class="form-row"><label>Vehicle :</label><input id="vehicle"></div>
+<div class="form-row"><label>Part Number :</label><input id="partNumber"></div>
+<div class="form-row"><label>Part Name :</label><input id="partName"></div>
+<div class="form-row"><label>Operator :</label><input id="operator"></div>
+<div class="form-row"><label>Date :</label><input id="date" type="date"></div>
+
+<table id="pointsTable">
+<tr><th>#</th><th>Name</th><th>Nominal</th><th>IT-</th><th>IT+</th><th>Type</th></tr>
+</table>
+<button class="start-btn" id="startBtn" onclick="startCapa()">START CAPA</button>
+</div>
+
+<div id="analysisPage" style="display:none">
+<div class="card" id="infoBar"></div>
+
+<!-- TABLE DATA -->
+<div class="card">
+<table id="analysisTable"></table>
+</div>
+
+<!-- PRE ANALYSE RESTOREE -->
+<div class="card analysis">
+<table id="statsTable"></table>
+</div>
+
+<!-- AJOUT BOUTON -->
+<button class="start-btn" onclick="launchAnalysis()">LANCER ANALYSE</button>
+``
+
+</div>
+
+<div id="report" style="display:none" class="card">
+Analyse à venir
+</div>
+
+</div>
+
+<div id="modal"></div>
+
+<script>
+let points=[];
+let measures=[];
+let capaStarted=false;
+let nextPartId=1;
+
+function addRow(){
+  let id=points.length+1;
+  points.push({id,name:"",nominal:null,itMinus:null,itPlus:null,type:""});
+  let row=document.getElementById("pointsTable").insertRow();
+  row.innerHTML=`<td>${id}</td>
+  <td><input oninput="update(${id-1},'name',this.value)"></td>
+  <td><input type="number" oninput="update(${id-1},'nominal',this.value)"></td>
+  <td><input type="number" oninput="updateITminus(${id-1},this)"></td>
+  <td><input type="number" oninput="updateITplus(${id-1},this)"></td>
+  <td><select onchange="update(${id-1},'type',this.value)"><option value=""></option><option>Special characteristic</option><option>Key characteristic</option><option>Regulatory</option><option>Safety</option></select></td>`;
+}
+
+function update(i,f,v){
+  points[i][f]=v;
+  let p=points[i];
+
+  let nom=parseFloat(p.nominal);
+  let itM=parseFloat(p.itMinus);
+  let itP=parseFloat(p.itPlus);
+
+  if(i===points.length-1 && p.name && !isNaN(nom) && !isNaN(itM) && !isNaN(itP)){
+    addRow();
+  }
+}
+
+function updateITminus(i,input){
+  let v=parseFloat(input.value);
+  if(!isNaN(v)){
+    if(v>0){v=0;input.value=0;}
+    points[i].itMinus=v;
+  }else{points[i].itMinus=null;}
+  update(i,'itMinus',points[i].itMinus);
+}
+
+function updateITplus(i,input){
+  let v=parseFloat(input.value);
+  if(!isNaN(v)){
+    if(v<0){v=0;input.value=0;}
+    points[i].itPlus=v;
+  }else{points[i].itPlus=null;}
+  update(i,'itPlus',points[i].itPlus);
+}
+
+addRow();
+
+function startCapa(){
+if(!capaStarted){
+  measures=[{part:nextPartId++,values:{}}];
+  capaStarted=true;
+  startBtn.innerText="CAPA";
+}
+showPage('analysisPage');
+infoBar.innerHTML=`<div><b>${customer.value}</b> | ${vehicle.value} | ${partNumber.value} | ${partName.value}</div><div>${operator.value} | ${date.value}</div>`;
+render();}
+
+function isOK(val,p){let v=parseFloat(val);let nom=parseFloat(p.nominal);return v>=nom+parseFloat(p.itMinus)&&v<=nom+parseFloat(p.itPlus);}
+
+function deleteRow(i){measures.splice(i,1);render();}
+
+function stats(values,p){
+if(values.length<2)return {range:0,avg:0,std:0,cp:0,cpk:0};
+let min=Math.min(...values);
+let max=Math.max(...values);
+let avg=values.reduce((a,b)=>a+b,0)/values.length;
+let std=Math.sqrt(values.map(x=>(x-avg)**2).reduce((a,b)=>a+b)/values.length);
+let cp=(p.itPlus - p.itMinus)/(6*(std||1));
+let cpk=Math.min((p.itPlus-avg)/(3*(std||1)),(avg-p.itMinus)/(3*(std||1)));
+return {range:(max-min),avg,std,cp,cpk};}
+
+function render(){
+let t=analysisTable;t.innerHTML="";
+let head="<tr><th>Part</th>";
+points.forEach(p=>{if(p.name){head+=`<th>${p.name}<br><small>${p.type||''}</small><br><small>${p.nominal} [${p.itMinus}; ${p.itPlus}]</small></th>`;}});
+head+="<th></th></tr>";
+t.innerHTML+=head;
+
+measures.forEach((m,i)=>{
+let row=`<tr><td class='link' onclick='openM(${i})'>${m.part}</td>`;
+points.forEach(p=>{if(p.name){let v=m.values[p.id];row+=`<td class='${v? (isOK(v,p)?"value-ok":"value-nok") : ""}'>${v||'-'}</td>`;}});
+row+=`<td><span class='delete-btn' onclick='deleteRow(${i})'>🗑</span></td></tr>`;
+t.innerHTML+=row;
+});
+
+// PRE ANALYSE
+let sT=statsTable;sT.innerHTML="";
+['Range','Average','Std Dev','Cp','Cpk'].forEach((lab,ri)=>{
+let row=`<tr><td>${lab}</td>`;
+points.forEach(p=>{
+if(!p.name){row+='<td></td>';return;}
+let vals=measures.map(m=>parseFloat(m.values[p.id])).filter(v=>!isNaN(v));
+let s=stats(vals,p);
+let v=[s.range,s.avg,s.std,s.cp,s.cpk][ri];
+row+=`<td>${isFinite(v)?v.toFixed(2):'-'}</td>`;
+});
+row+='</tr>';
+sT.innerHTML+=row;
+});
+}
+
+function openM(i){
+let modal=document.getElementById("modal");
+modal.innerHTML=`<h3>Part ${measures[i].part}</h3>`;
+points.forEach(p=>{if(!p.name)return;
+modal.innerHTML+=`<div class='point-line'><div class='point-title'>${p.name}</div><div class='point-spec'>${p.nominal} [${p.itMinus}; ${p.itPlus}]</div>
+<div style="display:flex; gap:5px;">
+  <input type='number' id='m${p.id}'>
+  <button onclick="startVoice('m${p.id}')">🎤</button>
+</div>
+</div>`;});
+modal.innerHTML+=`<button class='ok-btn' onclick='saveM(${i})'>OK</button>`;
+modal.style.display='block';}
+
+function saveM(i){
+let vals={};
+points.forEach(p=>{if(!p.name)return;vals[p.id]=document.getElementById('m'+p.id).value;});
+measures[i].values=vals;
+
+let last=measures[measures.length-1];
+let empty=true;
+for(let k in last.values){if(last.values[k])empty=false;}
+if(!empty) measures.push({part:nextPartId++,values:{}});
+
+modal.style.display='none';
+render();}
+
+function showPage(p){formPage.style.display='none';analysisPage.style.display='none';report.style.display='none';document.getElementById(p).style.display='block';}
+
+function launchAnalysis(){
+
+  // Préparer les données propres
+  let cleanPoints = points.filter(p => p.name);
+
+  let data = {
+    info: {
+      customer: customer.value,
+      vehicle: vehicle.value,
+      partNumber: partNumber.value,
+      partName: partName.value,
+      operator: operator.value,
+      date: date.value
+    },
+    points: cleanPoints,
+    measures: measures
+  };
+
+  // Stockage temporaire
+  localStorage.setItem("capaData", JSON.stringify(data));
+
+  // Ouvre la page analyse
+  window.open("analysis.html", "_blank");
+}
+
+let recognition;
+let currentInput = null;
+
+function initVoice() {
+  if (!('webkitSpeechRecognition' in window)) {
+    alert("Reconnaissance vocale non supportée");
+    return;
+  }
+
+  recognition = new webkitSpeechRecognition();
+  recognition.lang = 'fr-FR';
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  recognition.onresult = function(event) {
+    let text = event.results[0][0].transcript;
+    console.log("Reconnu:", text);
+
+    let value = parseMesure(text);
+
+    if (currentInput) {
+      currentInput.value = value;
+    }
+  };
+
+  recognition.onerror = function(e) {
+    console.log("Erreur micro:", e);
+  };
+}
+
+function startVoice(inputId) {
+  currentInput = document.getElementById(inputId);
+  recognition.start();
+}
+
+function parseMesure(text) {
+  text = text.toLowerCase();
+
+  text = text.replace(",", ".");
+  text = text.replace("moins", "-");
+  text = text.replace("zéro", "0");
+
+  // garder uniquement chiffres + . + -
+  let clean = text.match(/-?\d+(\.\d+)?/);
+
+  return clean ? parseFloat(clean[0]) : "";
+}
+
+initVoice();
+
+</script>
+
+</body>
+</html>
