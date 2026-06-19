@@ -372,7 +372,7 @@ function handleVoiceCommand(text) {
   }
 
   // 👉 commande pièce suivante
-  if (COMMAND_NEXT_PART.some(cmd => text.includes(cmd))) {
+  if (text.includes("pièce") && text.includes("suivante")){
     saveM(currentMeasureIndex);
     
 currentMeasureIndex++;
@@ -397,6 +397,7 @@ let input = document.getElementById("m" + point.id);
     if (input) {
       input.value = value;
     }
+	
   }
 }
 
