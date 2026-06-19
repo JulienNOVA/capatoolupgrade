@@ -1,0 +1,128 @@
+<!DOCTYPE html><!DOCTYPE<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Analyse CAPA</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body{font-family:Arial;background:#f5f7fa;margin:0;}
+.container{max-width:1200px;margin:auto;padding:20px;}
+.card{background:white;padding:15px;border-radius:10px;margin-bottom:20px;border:1px solid #ddd;}
+h2{color:#1f5aa6;}
+
+.point-block{margin-bottom:15px;padding:10px;border:1px solid #ccc;border-radius:8px;}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="card" id="info"></div>
+
+<div class="card">
+<h2>Choix des lois statistiques</h2>
+<div id="lawSelection"></div>
+<button onclick="runAnalysis()">ANALYSER</button>
+</div>
+
+<div id="results"></div>
+
+</div>
+
+<script>
+
+let data = JSON.parse(localStorage.getItem("capaData"));
+
+document.getElementById("info").innerHTML =
+ `<b>${data.info.customer}</b> | ${data.info.vehicle} | ${data.info.partNumber} | ${data.info.partName}<br>
+ ${data.info.operator} | ${data.info.date}`;
+
+
+// ---------------- LOI SELECTION ----------------
+let lawDiv = document.getElementById("lawSelection");
+
+data.points.forEach(p => {
+  let div = document.createElement("div");
+  div.className="point-block";
+  div.innerHTML = `
+    <b>${p.name}</b><br>
+    <select id="law_${p.id}">
+      <option>Normale</option>
+      <option>Déformée</option>
+      <option>Rayleigh</option>
+    </select>
+  `;
+  lawDiv.appendChild(div);
+});
+
+
+// ---------------- ANALYSE ----------------
+function runAnalysis(){
+
+  let resDiv = document.getElementById("results");
+  resDiv.innerHTML = "";
+
+  data.points.forEach(p => {
+
+    let values = data.measures
+      .map(m => parseFloat(m.values[p.id]))
+      .filter(v => !isNaN(v));
+
+    if(values.length < 2) return;
+
+    let canvas1 = document.createElement("canvas");
+    let canvas2 = document.createElement("canvas");
+
+    let block = document.createElement("div");
+    block.className="card";
+    block.innerHTML = `<h2>${p.name}</h2>`;
+    block.appendChild(canvas1);
+    block.appendChild(canvas2);
+
+    resDiv.appendChild(block);
+
+    // ---------------- GRAPH 1 = DISPERSION ----------------
+    new Chart(canvas1, {
+      type: 'scatter',
+      data: {
+        datasets: [{
+          label: 'Mesures',
+          data: values.map((v,i)=>({x:i+1,y:v}))
+        }]
+      }
+    });
+
+    // ---------------- GRAPH 2 = COURBE ----------------
+    let avg = values.reduce((a,b)=>a+b,0)/values.length;
+    let std = Math.sqrt(values.map(x=>(x-avg)**2).reduce((a,b)=>a+b)/values.length);
+
+    let x = [];
+    let y = [];
+
+    for(let i=avg-4*std;i<=avg+4*std;i+=std/5){
+      x.push(i);
+      y.push(Math.exp(-0.5*((i-avg)/std)**2));
+    }
+
+    new Chart(canvas2, {
+      type: 'line',
+      data: {
+        labels: x,
+        datasets: [{
+          label: 'Distribution',
+          data: y,
+          fill:true
+        }]
+      }
+    });
+
+  });
+
+}
+
+</script>
+
+</body>
+</html>
