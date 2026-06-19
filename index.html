@@ -203,6 +203,17 @@ sT.innerHTML+=row;
 }
 
 function openM(i){
+
+currentMeasureIndex = i;
+currentIndex = 0;
+modalOpen = true;
+
+setTimeout(() => {
+  let firstInput = document.querySelector("#modal input");
+  if (firstInput) firstInput.focus();
+}, 100);
+
+
 let modal=document.getElementById("modal");
 modal.innerHTML=`<h3>Part ${measures[i].part}</h3>`;
 points.forEach(p=>{if(!p.name)return;
@@ -212,8 +223,17 @@ modal.innerHTML+=`<div class='point-line'><div class='point-title'>${p.name}</di
   <button onclick="startVoice('m${p.id}')">🎤</button>
 </div>
 </div>`;});
-modal.innerHTML+=`<button class='ok-btn' onclick='saveM(${i})'>OK</button>`;
+
+modal.innerHTML += `
+  <div style="margin-top:15px; display:flex; gap:10px;">
+    <button onclick="startDictation()">🎤 Dictée continue</button>
+    <button class='ok-btn' onclick='saveM(${i})'>OK</button>
+  </div>
+`;
+
 modal.style.display='block';}
+
+
 
 function saveM(i){
 let vals={};
@@ -258,6 +278,7 @@ function launchAnalysis(){
 let recognition;
 let currentInput = null;
 
+/*
 function initVoice() {
   if (!('webkitSpeechRecognition' in window)) {
     alert("Reconnaissance vocale non supportée");
@@ -284,6 +305,7 @@ function initVoice() {
     console.log("Erreur micro:", e);
   };
 }
+*/
 
 function startVoice(inputId) {
   currentInput = document.getElementById(inputId);
@@ -296,14 +318,108 @@ function parseMesure(text) {
   text = text.replace(",", ".");
   text = text.replace("moins", "-");
   text = text.replace("zéro", "0");
+  text = text.replace("virgule", ".");
 
-  // garder uniquement chiffres + . + -
-  let clean = text.match(/-?\d+(\.\d+)?/);
 
-  return clean ? parseFloat(clean[0]) : "";
+  let match = text.match(/-?\d+(\.\d+)?/);
+  return match ? parseFloat(match[0]) : NaN;
+
 }
 
+let recognition;
+let currentIndex = 0;
+let currentMeasureIndex = 0;
+let modalOpen = false;
+
+const COMMAND_NEXT_POINT = ["point suivant", "suivant"];
+const COMMAND_NEXT_PART = ["pièce suivante", "piece suivante"];
+
+function initVoice() {
+  if (!('webkitSpeechRecognition' in window)) {
+    alert("Non supporté");
+    return;
+  }
+
+  recognition = new webkitSpeechRecognition();
+  recognition.lang = 'fr-FR';
+  recognition.continuous = true;
+  recognition.interimResults = false;
+
+  recognition.onresult = function(event) {
+    let text = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
+    console.log("Voice:", text);
+
+    handleVoiceCommand(text);
+  };
+
+  recognition.onerror = function(e) {
+    console.log("Voice error:", e);
+  };
+}
+
+function handleVoiceCommand(text) {
+
+  // 👉 commande point suivant
+  if (COMMAND_NEXT_POINT.some(cmd => text.includes(cmd))) {
+    goToNextInput();
+    return;
+  }
+
+  // 👉 commande pièce suivante
+  if (COMMAND_NEXT_PART.some(cmd => text.includes(cmd))) {
+    saveM(currentMeasureIndex);
+    openM(currentMeasureIndex + 1);
+    currentMeasureIndex++;
+    currentIndex = 0;
+    return;
+  }
+
+  // 👉 sinon = valeur
+  let value = parseMesure(text);
+
+  if (!isNaN(value)) {
+    let input = document.getElementById("m" + points[currentIndex].id);
+    if (input) {
+      input.value = value;
+    }
+  }
+}
+
+
+function goToNextInput() {
+  currentIndex++;
+
+  let validPoints = points.filter(p => p.name);
+
+  if (currentIndex >= validPoints.length) {
+    currentIndex = validPoints.length - 1;
+  }
+
+  let nextId = validPoints[currentIndex].id;
+  let input = document.getElementById("m" + nextId);
+
+  if (input) {
+    input.focus();
+  }
+}
+``
+
+function startDictation() {
+  recognition.start();
+}
+
+
+function speak(msg) {
+  const synth = window.speechSynthesis;
+  const utter = new SpeechSynthesisUtterance(msg);
+  utter.lang = "fr-FR";
+  synth.speak(utter);
+}
+
+
 initVoice();
+
+
 
 </script>
 
