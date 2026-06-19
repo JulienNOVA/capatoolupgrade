@@ -338,7 +338,7 @@ let currentMeasureIndex = 0;
 let modalOpen = false;
 
 const COMMAND_NEXT_POINT = ["point suivant", "suivant"];
-const COMMAND_NEXT_PART = ["pièce suivante", "piece suivante"];
+const COMMAND_NEXT_PART = ["pièce suivante", "piece suivante", "valider"];
 
 function initVoice() {
   if (!('webkitSpeechRecognition' in window)) {
@@ -366,20 +366,25 @@ function initVoice() {
 function handleVoiceCommand(text) {
 
   // 👉 commande point suivant
-  if (COMMAND_NEXT_POINT.some(cmd => text.includes(cmd))) {
+  if (text.includes("suivant")) {
     goToNextInput();
     return;
   }
 
   // 👉 commande pièce suivante
-  if (text.includes("pièce") && text.includes("suivante")){
-    saveM(currentMeasureIndex);
+  if (text.includes("valider")){
     
-currentMeasureIndex++;
-openM(currentMeasureIndex);
+ speak("ok");
 
-    currentIndex = 0;
-    return;
+  saveM(currentMeasureIndex);
+
+  currentMeasureIndex++;
+  openM(currentMeasureIndex);
+
+  currentIndex = 0;
+
+  return;
+
   }
 
   // 👉 sinon = valeur
