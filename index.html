@@ -116,17 +116,9 @@ function addRow(){
   <td><select onchange="update(${id-1},'type',this.value)"><option value=""></option><option>Special characteristic</option><option>Key characteristic</option><option>Regulatory</option><option>Safety</option></select></td>`;
 }
 
+
 function update(i,f,v){
-  points[i][f]=v;
-  let p=points[i];
-
-  let nom=parseFloat(p.nominal);
-  let itM=parseFloat(p.itMinus);
-  let itP=parseFloat(p.itPlus);
-
-if(i===points.length-1 && p.name && !isNaN(nom) && !isNaN(itM) && !isNaN(itP)){
-    addRow();
-  }
+  points[i][f] = v;
 }
 
 function updateITminus(i,input){
