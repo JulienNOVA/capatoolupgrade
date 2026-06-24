@@ -461,6 +461,16 @@ function handleKey(e){
 }
 
 
+function updateName(i, value){
+  points[i].name = value;
+
+  // 👉 si on remplit la dernière ligne → on en ajoute une
+  if(i === points.length - 1 && value.trim() !== ""){
+    addRow();
+  }
+}
+
+
 
 </script>
 
