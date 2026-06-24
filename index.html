@@ -61,6 +61,7 @@ button{padding:12px;border:none;border-radius:8px;font-size:14px;color:white;fon
 <div class="form-row"><label>Vehicle :</label><input id="vehicle"></div>
 <div class="form-row"><label>Part Number :</label><input id="partNumber"></div>
 <div class="form-row"><label>Part Name :</label><input id="partName"></div>
+<div class="form-row"><label>Comment :</label><input id="comment"></div>
 <div class="form-row"><label>Operator :</label><input id="operator"></div>
 <div class="form-row"><label>Date :</label><input id="date" type="date"></div>
 
@@ -105,11 +106,11 @@ let nextPartId=1;
 
 function addRow(){
   let id=points.length+1;
-  points.push({id,name:"",nominal:null,itMinus:null,itPlus:null,type:""});
+  points.push({id,name:"",nominal:0,itMinus:null,itPlus:null,type:""});
   let row=document.getElementById("pointsTable").insertRow();
   row.innerHTML=`<td>${id}</td>
   <td><input oninput="update(${id-1},'name',this.value)"></td>
-  <td><input type="number" oninput="update(${id-1},'nominal',this.value)"></td>
+  <td>input type="number" value="0" oninput="update(${id-1},'nominal',this.value)"></td>
   <td><input type="number" oninput="updateITminus(${id-1},this)"></td>
   <td><input type="number" oninput="updateITplus(${id-1},this)"></td>
   <td><select onchange="update(${id-1},'type',this.value)"><option value=""></option><option>Special characteristic</option><option>Key characteristic</option><option>Regulatory</option><option>Safety</option></select></td>`;
@@ -123,7 +124,7 @@ function update(i,f,v){
   let itM=parseFloat(p.itMinus);
   let itP=parseFloat(p.itPlus);
 
-  if(i===points.length-1 && p.name && !isNaN(nom) && !isNaN(itM) && !isNaN(itP)){
+if(i===points.length-1 && p.name && !isNaN(nom) && !isNaN(itM) && !isNaN(itP)){
     addRow();
   }
 }
@@ -219,14 +220,15 @@ modal.innerHTML=`<h3>Part ${measures[i].part}</h3>`;
 points.forEach(p=>{if(!p.name)return;
 modal.innerHTML+=`<div class='point-line'><div class='point-title'>${p.name}</div><div class='point-spec'>${p.nominal} [${p.itMinus}; ${p.itPlus}]</div>
 <div style="display:flex; gap:5px;">
-  <input type='number' id='m${p.id}'>
+
+<input type='number' id='m${p.id}' onkeydown="handleKey(event)">
   <button onclick="startVoice('m${p.id}')">🎤</button>
 </div>
 </div>`;});
 
 modal.innerHTML += `
   <div style="margin-top:15px; display:flex; gap:10px;">
-    <button onclick="startDictation()">🎤 Dictée continue</button>
+    <button onclick="startDictation()">🎤 Ninou</button>
     <button class='ok-btn' onclick='saveM(${i})'>OK</button>
   </div>
 `;
@@ -324,7 +326,10 @@ function parseMesure(text) {
   text = text.replace(",", ".");
   text = text.replace("moins", "-");
   text = text.replace("zéro", "0");
-  text = text.replace("virgule", ".");
+  text = text.replace("zero", "0");
+  text = text.replace(/virgule/g, ".");
+  text = text.replace(/point/g, ".");
+
 
 
   let match = text.match(/-?\d+(\.\d+)?/);
@@ -447,6 +452,13 @@ if ('webkitSpeechRecognition' in window) {
   console.log("Reconnaissance vocale non supportée");
 }
 
+
+function handleKey(e){
+  if(e.key === "Enter"){
+    e.preventDefault();
+    goToNextInput();
+  }
+}
 
 
 
